@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live PPE Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #4c4ba6 0%, #00a9fe 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .navbar a {
+            color: #2c3e50;
+            text-decoration: none;
+            font-size: 18px;
+        }
+        
+        .navbar a:hover {
+            color: #00f2fe;
+        }
+        
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .user-info {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        .status-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .status-badge.offline {
+            background: #f44336;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+        
+        .video-section {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        #videoFeed {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .video-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .overlay-badge {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+        }
+        
+        .btn-start {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+        
+        .btn-start:hover {
+            box-shadow: 0 10px 25px rgba(76, 175, 80, 0.4);
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            color: white;
+        }
+        
+        .btn-stop:hover {
+            box-shadow: 0 10px 25px rgba(244, 67, 54, 0.4);
+        }
+        
+        .btn-download {
+            background: linear-gradient(135deg, #363634 0%, #918d89 100%);
+            color: white;
+        }
+        
+        .btn-download:hover {
+            box-shadow: 0 10px 25px rgb(111, 110, 108);
+        }
+        
+        .btn-download:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .info-panel h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .color-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 3px solid #ddd;
+        }
+        
+        .color-box.green {
+            background: #4CAF50;
+            border-color: #4CAF50;
+        }
+        
+        .color-box.red {
+            background: #f44336;
+            border-color: #f44336;
+        }
+        
+        .legend-text {
+            flex: 1;
+        }
+        
+        .legend-text strong {
+            display: block;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .legend-text span {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .alert-section {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .alert-section h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .alert-section p {
+            color: #856404;
+            font-size: 14px;
+        }
+        
+        .violation-alert {
+            background: #f8d7da;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .violation-alert.show {
+            display: block;
+        }
+        
+        .violation-alert h3 {
+            color: #721c24;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">← Back to Home</a>
+        <div class="nav-right">
+            <span class="user-info">👤 {{ username }}</span>
+            <div class="status-badge offline" id="statusBadge">🔴 Offline</div>
+            <a href="/logout/">Logout</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>Live PPE Detection</h1>
+            <p><i>Real-time monitoring with automatic violation detection</i></p>
+        </div>
+        
+        <div class="main-content">
+            <div class="video-section">
+                <div class="video-container" id="videoContainer">
+                    <img id="videoFeed" src="" alt="Video Feed" style="display:none;">
+                    <div class="video-overlay">
+                        <div class="overlay-badge">Camera Active</div>
+                        <div class="overlay-badge" id="fpsCounter">FPS: --</div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn btn-start" onclick="startDetection()">
+                        ▶️ Start Detection
+                    </button>
+                    <button class="btn btn-stop" onclick="stopDetection()">
+                        ⏹️ Stop Detection
+                    </button>
+                    <button class="btn btn-download" id="downloadBtn" onclick="downloadReceipt()" disabled>
+                        Download Last Receipt
+                    </button>
+                    <button class="btn btn-download" onclick="viewViolations()" style="background: linear-gradient(135deg, #5e5f60 0%, #a5adb5 100%);">
+                        View All Logs
+                    </button>
+
+                    <button class="btn btn-download" id="downloadExcelBtn" onclick="downloadExcel()" style="background: linear-gradient(135deg, #727772 0%, #b9c4b9 100%);">
+                        Download All Logs (CSV)
+                    </button>
+
+                </div>
+                
+                <div class="violation-alert" id="violationAlert">
+                    <h3>⚠️ VIOLATION DETECTED!</h3>
+                    <p>A safety violation has been captured. Click "Download Receipt" to save the evidence.</p>
+                </div>
+                
+                <div class="alert-section">
+                    <h3>⚠️ Safety Notice</h3>
+                    <p>All personnel must wear complete PPE at all times. Violations will be logged and reported.</p>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="info-panel">
+                    <h2>Detection Rules</h2>
+                    
+                    <div class="legend-item">
+                        <div class="color-box green"></div>
+                        <div class="legend-text">
+                            <strong>Green Box</strong>
+                            <span>PPE Detected - Compliant</span>
+                        </div>
+                    </div>
+                    
+                    <div class="legend-item">
+                        <div class="color-box red"></div>
+                        <div class="legend-text">
+                            <strong>Red Box</strong>
+                            <span>No PPE - Violation!</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-panel">
+                    <h2>Live Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="detectionCount">0</div>
+                            <div class="stat-label">Total Detections</div>
+                        </div>
+                        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <div class="stat-number" id="violationCount">0</div>
+                            <div class="stat-label">Violations</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-panel">
+                    <h2>PPE Requirements</h2>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="padding: 10px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px;">
+                            🪖 Hard Hat / Safety Helmet
+                        </li>
+                        <li style="padding: 10px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px;">
+                            🦺 Safety Vest
+                        </li>
+                        <li style="padding: 10px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px;">
+                            🥽 Safety Goggles
+                        </li>
+                        <li style="padding: 10px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px;">
+                            🧤 Safety Gloves
+                        </li>
+                        <li style="padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                            👢 Safety Boots
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let isDetecting = false;
+        let detectionCount = 0;
+        let violationCount = 0;
+        let statusCheckInterval;
+        
+        function startDetection() {
+            if (!isDetecting) {
+                isDetecting = true;
+
+                document.getElementById('statusBadge').innerHTML = '🟢 Live';
+                document.getElementById('statusBadge').classList.remove('offline');
+
+                const container = document.getElementById('videoContainer');
+                const video = document.getElementById('videoFeed');
+
+                container.style.display = 'block';
+                video.style.display = 'block';
+                video.src = '/video_feed/';
+
+                statusCheckInterval = setInterval(checkViolationStatus, 2000);
+                updateFPS();
+            }
+        }
+
+
+        
+        function stopDetection() {
+            if (isDetecting) {
+                isDetecting = false;
+
+                document.getElementById('statusBadge').innerHTML = '🔴 Offline';
+                document.getElementById('statusBadge').classList.add('offline');
+
+                const container = document.getElementById('videoContainer');
+                const video = document.getElementById('videoFeed');
+
+                video.src = '';
+                video.style.display = 'none';
+                container.style.display = 'none';  
+
+                document.getElementById('fpsCounter').innerHTML = 'FPS: --';
+
+                if (statusCheckInterval) clearInterval(statusCheckInterval);
+            }
+        }
+
+        
+        function updateFPS() {
+            if (isDetecting) {
+                const fps = Math.floor(Math.random() * 5) + 25;
+                document.getElementById('fpsCounter').innerHTML = `FPS: ${fps}`;
+                setTimeout(updateFPS, 1000);
+            }
+        }
+        
+        function checkViolationStatus() {
+            fetch('/get_violation_status/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.has_violation) {
+                        document.getElementById('downloadBtn').disabled = false;
+                        document.getElementById('violationAlert').classList.add('show');
+                        document.getElementById('violationCount').innerHTML = data.violation_count;
+                    }
+                    
+                    // Update total logged count
+                    if (data.total_logged > 0) {
+                        document.getElementById('downloadExcelBtn').innerHTML = `Download All Logs (${data.total_logged} violations)`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking violation status:', error);
+                });
+        }
+        
+        function downloadReceipt() {
+            window.location.href = '/download_receipt/';
+        }
+        
+        function downloadExcel() {
+            window.location.href = '/download_excel/';
+        }
+        
+        // Simulate detection statistics
+        function updateStats() {
+            if (isDetecting) {
+                detectionCount += Math.floor(Math.random() * 3);
+                document.getElementById('detectionCount').innerHTML = detectionCount;
+            }
+            setTimeout(updateStats, 2000);
+        }
+
+        function viewViolations() {
+            window.location.href = '/violations/';
+        }
+
+        
+        updateStats();
+    </script>
+</body>
+</html>
